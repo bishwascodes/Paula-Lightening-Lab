@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LightningLabIOS")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d95fb42707920187d55cca0dd0fe19f5b0625dfe")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e7ba98a5febc0121eecd78c9fa1f0d89117a4fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("LightningLabIOS")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LightningLabIOS")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

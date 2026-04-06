@@ -10,7 +10,7 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.yourcompany.lightninglabios
+        bundle_identifier: $BUNDLE_ID
       vars:
         DOTNET_PATH: $CM_BUILD_DIR/dotnet
         DOTNET: $CM_BUILD_DIR/dotnet/dotnet
@@ -39,6 +39,14 @@ workflows:
           PLIST_BUDDY=/usr/libexec/PlistBuddy
           $PLIST_BUDDY -c "Delete :ITSAppUsesNonExemptEncryption" "$PLIST" || true
           $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+
+      - name: Validate bundle identifier
+        script: |
+          if [ "$BUNDLE_ID" = "com.yourcompany.lightninglabios" ]; then
+            echo "BUNDLE_ID is still the placeholder value (com.yourcompany.lightninglabios)."
+            echo "Set it to your real App Store Connect bundle identifier before running this workflow."
+            exit 1
+          fi
 
       - name: Build signed IPA
         script: |
