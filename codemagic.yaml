@@ -1,0 +1,78 @@
+workflows:
+  maui-ios-testflight:
+    name: MAUI iOS TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: APP_STORE_CONNECT_INTEGRATION_NAME
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.yourcompany.lightninglabios
+      vars:
+        DOTNET_PATH: $CM_BUILD_DIR/dotnet
+        DOTNET: $CM_BUILD_DIR/dotnet/dotnet
+        PROJECT_PATH: LightningLabIOS/LightningLabIOS.csproj
+        INFO_PLIST_PATH: LightningLabIOS/Platforms/iOS/Info.plist
+        BUNDLE_ID: "com.yourcompany.lightninglabios"
+        APP_STORE_APPLE_ID: "1234567890"
+        APP_DISPLAY_VERSION: "1.0.0"
+        TESTFLIGHT_BETA_GROUP: "Internal"
+
+    scripts:
+      - name: Install .NET SDK
+        script: |
+          wget https://dot.net/v1/dotnet-install.sh
+          chmod +x dotnet-install.sh
+          ./dotnet-install.sh --channel 9.0 --install-dir $DOTNET_PATH
+
+      - name: Install MAUI workload
+        script: |
+          $DOTNET nuget locals all --clear
+          $DOTNET workload install maui ios
+
+      - name: Set iOS export metadata
+        script: |
+          PLIST="$CM_BUILD_DIR/$INFO_PLIST_PATH"
+          PLIST_BUDDY=/usr/libexec/PlistBuddy
+          $PLIST_BUDDY -c "Delete :ITSAppUsesNonExemptEncryption" "$PLIST" || true
+          $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+
+      - name: Build signed IPA
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            UPDATED_BUILD_NUMBER=$BUILD_NUMBER
+          else
+            UPDATED_BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          fi
+
+          CERT_NAME=$(keychain list-certificates | jq -r '.[0].common_name')
+          PROFILE_NAME=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" -execdir sh -c '/usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin <<< $(security cms -D -i "$1")' sh {} \; | head -n 1)
+
+          mkdir -p artifacts
+
+          $DOTNET publish "$PROJECT_PATH" \
+            -f net9.0-ios \
+            -c Release \
+            -p:BuildIpa=true \
+            -p:ArchiveOnBuild=true \
+            -p:RuntimeIdentifier=ios-arm64 \
+            -p:ApplicationId="$BUNDLE_ID" \
+            -p:ApplicationDisplayVersion="$APP_DISPLAY_VERSION" \
+            -p:ApplicationVersion="$UPDATED_BUILD_NUMBER" \
+            -p:CodesignKey="$CERT_NAME" \
+            -p:CodesignProvision="$PROFILE_NAME" \
+            -o artifacts
+
+    artifacts:
+      - artifacts/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - $TESTFLIGHT_BETA_GROUP
